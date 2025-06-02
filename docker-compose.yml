@@ -1,0 +1,25 @@
+version: '3.1'
+
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.1.0
+    container_name: keycloak
+    ports:
+      - "8080:8080"
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+    volumes:
+      #- C:\ProgramData\Keycloak\keycloak-data:/opt/keycloak/data
+      - C:\Users\Far\docker-volumes\keycloak-data:/opt/keycloak/data
+    command: start-dev
+
+  mariadb:
+    image: mariadb:11.6.2
+    container_name: mariadb
+    ports:
+      - "3316:3306"
+    environment:
+      MARIADB_ROOT_PASSWORD: POlEDLb6nSlx9M7vk6
+    volumes:
+      - C:\Users\Far\docker-volumes\mariadb-data:/var/lib/mysql
