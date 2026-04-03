@@ -8,7 +8,7 @@ services:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
     volumes:
-      - ${HOME}\docker-volumes\keycloak-data:/opt/keycloak/data
+      - ${USERPROFILE}\docker-volumes\keycloak-data:/opt/keycloak/data
     command: start-dev
 
   mariadb:
@@ -19,7 +19,7 @@ services:
     environment:
       MARIADB_ROOT_PASSWORD: POlEDLb6nSlx9M7vk6
     volumes:
-      - ${HOME}\docker-volumes\mariadb-data:/var/lib/mysql
+      - ${USERPROFILE}\docker-volumes\mariadb-data:/var/lib/mysql
 
   file-server:
     build:
@@ -30,7 +30,7 @@ services:
     ports:
       - "8085:8085"
     volumes:
-      - ${HOME}\docker-volumes\file-server:/data
+      - ${USERPROFILE}\docker-volumes\file-server:/data
     restart: unless-stopped
     environment:
         - APP_ROOT_FOLDER=/data
