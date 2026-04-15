@@ -49,3 +49,19 @@ services:
     volumes:
       - ${USERPROFILE}\docker-volumes\elastic-search\data:/usr/share/elasticsearch/data
     restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"   # AMQP (din app bruger denne)
+      - "15672:15672" # Web UI
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: secret
+    volumes:
+      - ${USERPROFILE}\docker-volumes\rabbitmq-data:/var/lib/rabbitmq
+    restart: unless-stopped
+
+volumes:
+  rabbitmq_data:
