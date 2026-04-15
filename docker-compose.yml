@@ -36,3 +36,19 @@ services:
         - APP_ROOT_FOLDER=/data
         - DEFAULT_FILE_DEPTH=2
         - MAX_MAINTENANCE_CONCURRENT_THREADS=4
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"   # AMQP (din app bruger denne)
+      - "15672:15672" # Web UI
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: secret
+    volumes:
+      - ${USERPROFILE}\docker-volumes\rabbitmq-data:/var/lib/rabbitmq
+    restart: unless-stopped
+
+volumes:
+  rabbitmq_data:
