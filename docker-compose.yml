@@ -28,10 +28,7 @@ services:
       - mariadb-data:/var/lib/mysql
 
   file-server:
-    build:
-      context: ..
-      dockerfile: file-server/Dockerfile
-    image: file-server:latest
+    image: ghcr.io/jorgenrunemortensen/file-server:${IMAGE_TAG:-latest}
     container_name: file-server
     ports:
       - "8085:8085"
@@ -44,12 +41,7 @@ services:
         - MAX_MAINTENANCE_CONCURRENT_THREADS=4
 
   content-app:
-    build:
-      context: ../content-app
-      dockerfile: Dockerfile
-      additional_contexts:
-        common-src: ../../common
-    image: content-app:latest
+    image: ghcr.io/jorgenrunemortensen/churchmedia-content-app:${IMAGE_TAG:-latest}
     container_name: content-app
     ports:
       - "8081:8081"
@@ -71,12 +63,7 @@ services:
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=http://keycloak:8080/realms/Alive/protocol/openid-connect/certs
 
   indexing-app:
-    build:
-      context: ../indexing-app
-      dockerfile: Dockerfile
-      additional_contexts:
-        common-src: ../../common
-    image: indexing-app:latest
+    image: ghcr.io/jorgenrunemortensen/churchmedia-index-app:${IMAGE_TAG:-latest}
     container_name: indexing-app
     ports:
       - "8086:8086"

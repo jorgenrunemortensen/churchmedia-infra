@@ -9,19 +9,36 @@ This repository contains the docker configurations and scripts necessary to depl
 ### Configuration
 docker-compose.yml configures the following applications to run in the Churchmedia infrastructure:
 
-| Image ID    | External Port Number | Internal Port Number   |
-|:------------|---------------------:|-----------------------:|
-| Keycloak    |                 8080 |                   8080 |
-| File-Server |                 8085 |                   8085 |
-| MariaDB     |                 3306 |                   3306 |
+| Service       | Image                                                  | Port(s)       |
+|:--------------|:-------------------------------------------------------|:--------------|
+| Keycloak      | quay.io/keycloak/keycloak                              | 8080          |
+| Content-App   | ghcr.io/jorgenrunemortensen/churchmedia-content-app    | 8081          |
+| File-Server   | ghcr.io/jorgenrunemortensen/file-server                | 8085          |
+| Indexing-App  | ghcr.io/jorgenrunemortensen/churchmedia-index-app      | 8086          |
+| MariaDB       | mariadb                                                | 3306, 3316    |
+| Elasticsearch | docker.elastic.co/elasticsearch/elasticsearch          | 9200          |
+| RabbitMQ      | rabbitmq:3-management                                  | 5672, 15672   |
+
+The application images are built and published to GitHub Container Registry by GitHub Actions
+in each application repository whenever `master` is pushed.
 
 ### Starting the Infrastructure
-To start the Churchmedia infrastructure, use the following command:
+Only Docker is required:
 
 ```bash
+git clone https://github.com/jorgenrunemortensen/churchmedia-infra.git
 cd churchmedia-infra
+cp .env.example .env    # then change the passwords in .env
+docker compose up -d
 ```
 
+Data is kept in named Docker volumes. Media files for File-Server are read from `./media`,
+or from the folder given by `MEDIA_ROOT` in `.env`.
+
+### Building from source
+To build the applications from source instead of pulling the published images, check out the
+repositories side by side as described in `docker-compose.dev.yml`, and run:
+
 ```bash
-docker-compose up -d
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 ```

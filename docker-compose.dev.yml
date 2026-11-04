@@ -1,0 +1,32 @@
+# Builds the applications from source instead of pulling the published images.
+# Expects the repositories to be checked out side by side:
+#
+#   <root>/common
+#   <root>/file-server
+#   <root>/church-media/churchmedia-infra   (this folder)
+#   <root>/church-media/content-app
+#   <root>/church-media/indexing-app
+#
+# Usage:  docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+# (or set COMPOSE_FILE in .env, see .env.example)
+services:
+  file-server:
+    image: file-server:dev
+    build:
+      context: ../../file-server
+      additional_contexts:
+        common-src: ../../common
+
+  content-app:
+    image: content-app:dev
+    build:
+      context: ../content-app
+      additional_contexts:
+        common-src: ../../common
+
+  indexing-app:
+    image: indexing-app:dev
+    build:
+      context: ../indexing-app
+      additional_contexts:
+        common-src: ../../common
