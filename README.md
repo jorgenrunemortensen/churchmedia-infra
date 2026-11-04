@@ -32,6 +32,16 @@ cp .env.example .env    # then change the passwords in .env
 docker compose up -d
 ```
 
+`docker compose up -d --wait` waits until every service reports healthy. The services are started
+in dependency order using health checks, so the applications only start when MariaDB, Keycloak,
+RabbitMQ and Elasticsearch are ready.
+
+On the first start:
+- Keycloak imports the realm `Alive` from `keycloak/alive-realm.json`, including the demo users
+  `admin`, `editor`, `viewer` and `tester` with the password `KEYCLOAK_DEMO_PASSWORD` from `.env`.
+  The admin console is at http://localhost:8080 (`KEYCLOAK_ADMIN_USERNAME` / `KEYCLOAK_ADMIN_PASSWORD`).
+- MariaDB creates the database `churchmedia` and the application user; Content-App creates the tables.
+
 Data is kept in named Docker volumes. Media files for File-Server are read from `./media`,
 or from the folder given by `MEDIA_ROOT` in `.env`.
 

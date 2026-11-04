@@ -7,9 +7,22 @@ services:
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KC_HEALTH_ENABLED: "true"
+      # Substituted into the realm file when it is imported
+      INDEXING_APP_CLIENT_SECRET: ${INDEXING_APP_CLIENT_SECRET}
+      KEYCLOAK_DEMO_PASSWORD: ${KEYCLOAK_DEMO_PASSWORD}
     volumes:
       - keycloak-data:/opt/keycloak/data
-    command: start-dev
+      # The realm 'Alive' is imported on startup, unless it already exists
+      - ./keycloak/alive-realm.json:/opt/keycloak/data/import/alive-realm.json:ro
+    command: start-dev --import-realm
+    healthcheck:
+      # The image has no curl, so the health endpoint on the management port is called through bash
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/9000 && printf 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && grep -q '\"UP\"' <&3"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
 
   mariadb:
     image: mariadb:11.6.2
@@ -26,6 +39,12 @@ services:
       MARIADB_PASSWORD: ${DB_PASSWORD}
     volumes:
       - mariadb-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
 
   file-server:
     image: ghcr.io/jorgenrunemortensen/file-server:${IMAGE_TAG:-latest}
@@ -39,6 +58,13 @@ services:
         - APP_ROOT_FOLDER=/data
         - DEFAULT_FILE_DEPTH=2
         - MAX_MAINTENANCE_CONCURRENT_THREADS=4
+    healthcheck:
+      # The application accepts connections (curl is not available in every base image)
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/8085"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
 
   content-app:
     image: ghcr.io/jorgenrunemortensen/churchmedia-content-app:${IMAGE_TAG:-latest}
@@ -47,9 +73,12 @@ services:
       - "8081:8081"
     restart: unless-stopped
     depends_on:
-      - mariadb
-      - keycloak
-      - rabbitmq
+      mariadb:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     environment:
       - TZ=Europe/Copenhagen
       - SPRING_DATASOURCE_URL=jdbc:mariadb://mariadb:3306/churchmedia
@@ -61,6 +90,13 @@ services:
       # Tokens are issued via http://localhost:8080 (the browser), but the signing keys are fetched internally from the keycloak container
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://localhost:8080/realms/Alive
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=http://keycloak:8080/realms/Alive/protocol/openid-connect/certs
+    healthcheck:
+      # The application accepts connections (curl is not available in every base image)
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/8081"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
 
   indexing-app:
     image: ghcr.io/jorgenrunemortensen/churchmedia-index-app:${IMAGE_TAG:-latest}
@@ -69,10 +105,14 @@ services:
       - "8086:8086"
     restart: unless-stopped
     depends_on:
-      - elasticsearch
-      - rabbitmq
-      - keycloak
-      - content-app
+      elasticsearch:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+      content-app:
+        condition: service_healthy
     environment:
       - TZ=Europe/Copenhagen
       - SPRING_ELASTICSEARCH_URIS=http://elasticsearch:9200
@@ -82,6 +122,13 @@ services:
       - SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_TOKEN_URI=http://keycloak:8080/realms/Alive/protocol/openid-connect/token
       - KEYCLOAK_CLIENT_SECRET=${INDEXING_APP_CLIENT_SECRET}
       - CONTENT_APP_API_BASE_URL=http://content-app:8081
+    healthcheck:
+      # The application accepts connections (curl is not available in every base image)
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/8086"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.17.3
@@ -95,6 +142,12 @@ services:
     volumes:
       - elasticsearch-data:/usr/share/elasticsearch/data
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs 'http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=1s' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
 
   rabbitmq:
     image: rabbitmq:3-management
@@ -108,6 +161,13 @@ services:
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
     restart: unless-stopped
+    healthcheck:
+      # Not rabbitmq-diagnostics: run as root before the broker has started, it creates a root-owned .erlang.cookie the broker cannot read
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/5672"]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+      start_period: 20s
 
 volumes:
   keycloak-data:
