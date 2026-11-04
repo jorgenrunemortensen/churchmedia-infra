@@ -16,6 +16,8 @@ services:
     container_name: mariadb
     ports:
       - "3306:3306"
+      # Extra port so the container can be reached from the host while a native MariaDB occupies 3306
+      - "3316:3306"
     environment:
       MARIADB_ROOT_PASSWORD: POlEDLb6nSlx9M7vk6
     volumes:
@@ -36,7 +38,30 @@ services:
         - APP_ROOT_FOLDER=/data
         - DEFAULT_FILE_DEPTH=2
         - MAX_MAINTENANCE_CONCURRENT_THREADS=4
-        
+
+  content-app:
+    build:
+      context: ../content-app
+      dockerfile: Dockerfile
+      additional_contexts:
+        common-src: ../../common
+    image: content-app:latest
+    container_name: content-app
+    ports:
+      - "8081:8081"
+    restart: unless-stopped
+    depends_on:
+      - mariadb
+      - keycloak
+      - rabbitmq
+    environment:
+      - TZ=Europe/Copenhagen
+      - SPRING_DATASOURCE_URL=jdbc:mariadb://mariadb:3306/churchmedia
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      # Tokens are issued via http://localhost:8080 (the browser), but the signing keys are fetched internally from the keycloak container
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://localhost:8080/realms/Alive
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=http://keycloak:8080/realms/Alive/protocol/openid-connect/certs
+
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.17.3
     container_name: elasticsearch
