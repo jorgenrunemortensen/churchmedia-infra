@@ -5,10 +5,10 @@ services:
     ports:
       - "8080:8080"
     environment:
-      KC_BOOTSTRAP_ADMIN_USERNAME: admin
-      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
     volumes:
-      - ${USERPROFILE}\docker-volumes\keycloak-data:/opt/keycloak/data
+      - keycloak-data:/opt/keycloak/data
     command: start-dev
 
   mariadb:
@@ -19,9 +19,13 @@ services:
       # Extra port so the container can be reached from the host while a native MariaDB occupies 3306
       - "3316:3306"
     environment:
-      MARIADB_ROOT_PASSWORD: POlEDLb6nSlx9M7vk6
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
+      # Only applied when the data volume is empty (first start)
+      MARIADB_DATABASE: churchmedia
+      MARIADB_USER: ${DB_USERNAME}
+      MARIADB_PASSWORD: ${DB_PASSWORD}
     volumes:
-      - ${USERPROFILE}\docker-volumes\mariadb-data:/var/lib/mysql
+      - mariadb-data:/var/lib/mysql
 
   file-server:
     build:
@@ -32,7 +36,7 @@ services:
     ports:
       - "8085:8085"
     volumes:
-      - ${USERPROFILE}\docker-volumes\file-server:/data
+      - ${MEDIA_ROOT:-./media}:/data
     restart: unless-stopped
     environment:
         - APP_ROOT_FOLDER=/data
@@ -57,7 +61,11 @@ services:
     environment:
       - TZ=Europe/Copenhagen
       - SPRING_DATASOURCE_URL=jdbc:mariadb://mariadb:3306/churchmedia
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
       - SPRING_RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_USERNAME=${RABBITMQ_USERNAME}
+      - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD}
       # Tokens are issued via http://localhost:8080 (the browser), but the signing keys are fetched internally from the keycloak container
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://localhost:8080/realms/Alive
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=http://keycloak:8080/realms/Alive/protocol/openid-connect/certs
@@ -82,7 +90,10 @@ services:
       - TZ=Europe/Copenhagen
       - SPRING_ELASTICSEARCH_URIS=http://elasticsearch:9200
       - SPRING_RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_USERNAME=${RABBITMQ_USERNAME}
+      - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD}
       - SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_TOKEN_URI=http://keycloak:8080/realms/Alive/protocol/openid-connect/token
+      - KEYCLOAK_CLIENT_SECRET=${INDEXING_APP_CLIENT_SECRET}
       - CONTENT_APP_API_BASE_URL=http://content-app:8081
 
   elasticsearch:
@@ -95,21 +106,24 @@ services:
       - xpack.security.enabled=false
       - ES_JAVA_OPTS=-Xms1g -Xmx1g
     volumes:
-      - ${USERPROFILE}\docker-volumes\elastic-search\data:/usr/share/elasticsearch/data
+      - elasticsearch-data:/usr/share/elasticsearch/data
     restart: unless-stopped
 
   rabbitmq:
     image: rabbitmq:3-management
     container_name: rabbitmq
     ports:
-      - "5672:5672"   # AMQP (din app bruger denne)
+      - "5672:5672"   # AMQP
       - "15672:15672" # Web UI
     environment:
-      RABBITMQ_DEFAULT_USER: admin
-      RABBITMQ_DEFAULT_PASS: secret
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
     volumes:
-      - ${USERPROFILE}\docker-volumes\rabbitmq-data:/var/lib/rabbitmq
+      - rabbitmq-data:/var/lib/rabbitmq
     restart: unless-stopped
 
 volumes:
-  rabbitmq_data:
+  keycloak-data:
+  mariadb-data:
+  elasticsearch-data:
+  rabbitmq-data:

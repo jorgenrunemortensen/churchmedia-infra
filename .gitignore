@@ -1,1 +1,4 @@
 *.bak
+.env
+docker-compose.override.yml
+media/
