@@ -29,7 +29,7 @@ Only Docker is required:
 git clone https://github.com/jorgenrunemortensen/churchmedia-infra.git
 cd churchmedia-infra
 cp .env.example .env    # then change the passwords in .env
-docker compose up -d
+docker compose up -d --wait
 ```
 
 `docker compose up -d --wait` waits until every service reports healthy. The services are started
